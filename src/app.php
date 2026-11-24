@@ -9,9 +9,14 @@ $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 
 $situacao = [
-    ['id' => 1, 'nome' => 'Mariana', 'unidadecurricular' => 'Segundo Ano Informática', 'curso' => 'Informática', 'aprovado' => 'true'],
-    ['id' => 2, 'nome' => 'Luiz', 'unidadecurricular' => 'Primeiro Ano Informática', 'curso' => 'Informática', 'aprovado' => 'false'],
-    ['id' => 3, 'nome' => 'Roberson', 'unidadecurricular' => 'Terceiro Ano Informática', 'curso' => 'Informática', 'aprovado' => 'true']
+    ['id' => 1, 'nome' => 'Mariana', 'unidadecurricular' => 'Segundo Ano Informática', 'curso' => 'Informática', 'aprovado' => true],
+    ['id' => 2, 'nome' => 'Luiz', 'unidadecurricular' => 'Primeiro Ano Informática', 'curso' => 'Informática', 'aprovado' => false],
+    ['id' => 3, 'nome' => 'Roberson', 'unidadecurricular' => 'Terceiro Ano Informática', 'curso' => 'Informática', 'aprovado' => true]
+];
+
+$produtos = [
+    ['id' => 1, 'nome' => 'Mouse'],
+    ['id' => 2, 'nome' => 'Teclado']
 ];
 
 $app->get('/status', function ($request, $response) { 
@@ -179,6 +184,92 @@ $app->get('/tic/plain', function ($request, $response) {
     return $response->withHeader('Content-Type', 'text/plain')->withStatus(200); 
 });
 
+
+/* ================================
+   API DE SITUAÇÕES ACADÊMICAS
+================================ */
+
+$app->post('/situacao', function ($request, $response) use (&$situacao) {
+    $dados = $request->getParsedBody();
+
+    if (!is_array($dados) || !isset($dados['nome']) || trim((string) $dados['nome']) === '') {
+        $response->getBody()->write(json_encode(['erro' => 'O nome é obrigatório']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+    }
+
+    $aprovado = isset($dados['aprovado'])
+        ? filter_var($dados['aprovado'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+        : false;
+
+    $novaSituacao = [
+        'id' => $situacao === [] ? 1 : max(array_column($situacao, 'id')) + 1,
+        'nome' => trim((string) $dados['nome']),
+        'unidadecurricular' => $dados['unidadecurricular'] ?? null,
+        'curso' => $dados['curso'] ?? null,
+        'aprovado' => $aprovado ?? false
+    ];
+
+    $situacao[] = $novaSituacao;
+    $response->getBody()->write(json_encode($novaSituacao));
+    return $response->withHeader('Content-Type', 'application/json')->withStatus(201);
+});
+
+$app->get('/situacao/{id}', function ($request, $response, $args) use (&$situacao) {
+    $id = (int) $args['id'];
+
+    foreach ($situacao as $registro) {
+        if ($registro['id'] === $id) {
+            $response->getBody()->write(json_encode($registro));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+        }
+    }
+
+    $response->getBody()->write(json_encode(['erro' => 'Situação não encontrada']));
+    return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+});
+
+$app->put('/situacao/{id}', function ($request, $response, $args) use (&$situacao) {
+    $id = (int) $args['id'];
+    $dados = $request->getParsedBody();
+
+    if (!is_array($dados) || !array_key_exists('aprovado', $dados)) {
+        $response->getBody()->write(json_encode(['erro' => 'O campo aprovado é obrigatório']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+    }
+
+    $aprovado = filter_var($dados['aprovado'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    if ($aprovado === null) {
+        $response->getBody()->write(json_encode(['erro' => 'O campo aprovado deve ser verdadeiro ou falso']));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+    }
+
+    foreach ($situacao as &$registro) {
+        if ($registro['id'] === $id) {
+            $registro['aprovado'] = $aprovado;
+            unset($registro);
+            $response->getBody()->write(json_encode(['mensagem' => 'Situação atualizada com sucesso']));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+        }
+    }
+
+    $response->getBody()->write(json_encode(['erro' => 'Situação não encontrada']));
+    return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+});
+
+$app->delete('/situacao/{id}', function ($request, $response, $args) use (&$situacao) {
+    $id = (int) $args['id'];
+
+    foreach ($situacao as $indice => $registro) {
+        if ($registro['id'] === $id) {
+            array_splice($situacao, $indice, 1);
+            $response->getBody()->write(json_encode(['mensagem' => 'Situação removida com sucesso']));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+        }
+    }
+
+    $response->getBody()->write(json_encode(['erro' => 'Situação não encontrada']));
+    return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+});
 
 /* ================================
    AULA 8 - GET COM PARÂMETRO

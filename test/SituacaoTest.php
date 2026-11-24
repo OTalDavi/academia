@@ -15,7 +15,7 @@ $request->getBody()->rewind();
 $response = $app->handle($request);
 $this->assertEquals(201, $response->getStatusCode());
 $corpo = json_decode((string) $response->getBody(), true);
-$this->assertEquals('Mouse', $corpo['nome']);
+$this->assertEquals('Mariana', $corpo['nome']);
 }
 
 
@@ -122,5 +122,45 @@ $response = $app->handle($request);
 $this->assertEquals(404, $response->getStatusCode());
 $corpo = json_decode((string) $response->getBody(), true);
 $this->assertEquals('Produto não encontrado', $corpo['erro']);
+}
+
+public function testGetSituacaoPorId(): void
+{
+$app = require __DIR__ . '/../src/app.php';
+$request = (new ServerRequestFactory())->createServerRequest('GET', '/situacao/1');
+$response = $app->handle($request);
+$this->assertEquals(200, $response->getStatusCode());
+$corpo = json_decode((string) $response->getBody(), true);
+$this->assertEquals('Mariana', $corpo['nome']);
+}
+
+public function testPutSituacaoAtualizaApenasAprovado(): void
+{
+$app = require __DIR__ . '/../src/app.php';
+$request = (new ServerRequestFactory())
+->createServerRequest('PUT', '/situacao/1')
+->withHeader('Content-Type', 'application/json');
+$request->getBody()->write(json_encode(['aprovado' => false, 'nome' => 'Outro nome']));
+$request->getBody()->rewind();
+$response = $app->handle($request);
+$this->assertEquals(200, $response->getStatusCode());
+
+$request = (new ServerRequestFactory())->createServerRequest('GET', '/situacao/1');
+$response = $app->handle($request);
+$corpo = json_decode((string) $response->getBody(), true);
+$this->assertFalse($corpo['aprovado']);
+$this->assertEquals('Mariana', $corpo['nome']);
+}
+
+public function testDeleteSituacaoRemoveRegistro(): void
+{
+$app = require __DIR__ . '/../src/app.php';
+$request = (new ServerRequestFactory())->createServerRequest('DELETE', '/situacao/1');
+$response = $app->handle($request);
+$this->assertEquals(200, $response->getStatusCode());
+
+$request = (new ServerRequestFactory())->createServerRequest('GET', '/situacao/1');
+$response = $app->handle($request);
+$this->assertEquals(404, $response->getStatusCode());
 }
 }
