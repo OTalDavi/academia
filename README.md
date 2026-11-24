@@ -376,3 +376,4 @@ Para executar os testes do projeto, entre no terminal e digite:
 ```bash
 vendor/bin/phpunit
 ```
+![alt text](image.png)
